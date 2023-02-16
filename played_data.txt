@@ -1,0 +1,3 @@
+Game ID Player ID   Player Email    End Result  Stop Round  Winnings
+77166	4982951400	sunlaure@usc.edu	D	2	61487
+37650	7058934591	example@usc.edu	ND	10	0.01
