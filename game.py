@@ -1,4 +1,8 @@
+# This is a Python version of the game Deal or No Deal.
+
 import random
+import time
+
 
 def pick_case(case_id_list_display):
     """
@@ -64,7 +68,7 @@ def displayBoard(case_id_list_display, list_of_prizes_display):
     :param list_of_prizes_display: list with prizes left
     :return: nothing
     """
-    print("Board:\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tPrizes:")
+    print("Board:\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tRemaining Prizes:")
     print(' -----      -----      -----      -----      -----      -----      ----- ')
     print('| ', case_id_list_display[0], ' |    | ', case_id_list_display[1], ' |    | ', case_id_list_display[2], ' |    | ',
     case_id_list_display[3], ' |    | ', case_id_list_display[4], ' |    | ', case_id_list_display[5], ' |    | ',
@@ -129,7 +133,10 @@ def eliminate_case(num_cases_to_eliminate, case_id_list_display, list_of_prizes_
     for i in range(num_cases_to_eliminate):  # do this num_cases_to_eliminate times
         eliminated_case = pick_case(case_id_list_display)  # pick case
         print("You chose case # " + str(eliminated_case))
-        print("It contained", case_values[eliminated_case])
+        print("Opening case:")
+        drumroll()
+        print(case_values[eliminated_case], "has been eliminated.")
+        time.sleep(1)
         # update displays:
         remove_id_from_display(eliminated_case, case_id_list_display)
         remove_prize_from_display(eliminated_case, list_of_prizes_display, case_values)
@@ -138,16 +145,26 @@ def eliminate_case(num_cases_to_eliminate, case_id_list_display, list_of_prizes_
             displayBoard(case_id_list_display, list_of_prizes_display)
 
 
+def get_prizes_left(list_of_prizes_display):
+    """
+    This function creats a list of remaining prizes without the blank spaces
+    :param list_of_prizes_display: list of remaining prizes with blank spaces
+    :return: prizes_left, no blank spaces
+    """
+    prizes_left = []
+    for prize in list_of_prizes_display: # go through display prize list
+        if str(prize).isnumeric(): # if entry contains number (ie still in play)
+            prizes_left.append(prize) # add to list
+    return prizes_left
+
+
 def get_offer(list_of_prizes_display):
     """
     This function calculates the banker's offer.
     :param list_of_prizes_display: list of prizes displayed
     :return: banker's offer
     """
-    prizes_left = [] # contains list of leftover prizes without the blank spaces
-    for prize in list_of_prizes_display:
-        if str(prize).isnumeric():
-            prizes_left.append(prize)
+    prizes_left = get_prizes_left(list_of_prizes_display)
     sum = 0
     for prize in prizes_left:
         sum += prize
@@ -158,19 +175,94 @@ def get_offer(list_of_prizes_display):
     return int(avg)
 
 
+class datarow:
+    # just a super class from which game and round inherit since both are types of data
+    def __init__(self, game_id, player_id, player_email):
+        self.game_id = game_id
+        self.player_id = player_id
+        self.player_email = player_email
+
+
+class game(datarow):
+    """
+    holds data about one played game
+    """
+    def __init__(self, game_id, player_id, player_email, end_result, stop_round, winnings):
+        super().__init__(game_id, player_id, player_email)
+        self.stop_round = stop_round
+        self.end_result = end_result
+        self.winnings = winnings
+
+    def write_to_file(self):
+        # append to data file
+        with open("played_data.txt", "a") as f_in:
+            f_in.write(str(self.game_id) + "\t" + str(self.player_id) + "\t" + self.player_email + "\t" + self.end_result + "\t" + str(self.stop_round) + "\t" + str(self.winnings) + "\n")
+
+
+class round(datarow):
+    """
+    holds data about one round played by a player
+    """
+    def __init__(self, game_id, player_id, player_email, round, bankers_offer, remaining_cases):
+        super().__init__(game_id, player_id, player_email)
+        self.round = round
+        self.bankers_offer = bankers_offer
+        self.remaining_cases = remaining_cases
+
+    def write_to_file(self):
+        # append to data file
+        with open("round_data.txt", "a") as f_in:
+            f_in.write(str(self.game_id) + "\t" + str(self.player_id) + "\t" + self.player_email + "\t" + str(self.round) + "\t" + str(self.bankers_offer) + "\t" + str(self.remaining_cases) + "\n")
+
+
+def drumroll():
+    # creates a little countdown for dramatic effect
+    for i in range(3):
+        time.sleep(0.25)
+        print(".")
+        time.sleep(0.25)
+
+
+def create_game_id():
+    """
+    This function generates a number 10000-99999 as a unique game id.
+    It checks if ID was used before.
+    :return: a unique ID
+    """
+    id_list = [] # new list
+    with open("played_data.txt", "r") as f_in: # from past game data
+        for line in f_in: # loop through lines
+            id = line[:5] # set id as first 5 characters of the line
+            id_list.append(id)
+
+    generateNew = True # true if need to generate a new id
+    while generateNew: # while id has been used
+        id = random.randrange(10000, 100000)  # get a number 10000-99999
+        if id in id_list:
+            generateNew = True
+        else: # unique id was generated
+            return id
+            generateNew = False # no need to generate another one
+
 def main():
     # WELCOME
-
     print("Welcome to Deal or No Deal!")
+    time.sleep(1)
+    player_id = input("Please enter your USC ID: ")
+    player_email = input("Please enter your USC email: ")
+    game_id = create_game_id()
+
     instr = "m" # initialize input to enter the loop
-    while instr != "0" and instr != "1":
-        instr = input("Enter 1 if you would like to read about how to play the game. Enter 0 to skip the tutorial.\n> ")
+    print("Enter 1 if you would like to read about how to play the game. Enter 0 to skip the tutorial.")
+    while instr != "0":
+        instr = input("> ")
         if instr == "1":
-            print("[instructions].") # fill in later
+            print("[instructions].\nEnter 0 to start. ") # fill in later
         elif instr == "0":
-            instr = "0" # nothing happens
+            print("Let's play Deal or No Deal!") # start game
+            time.sleep(1)
         else:
-            print("Please enter either a valid input. ")
+            print("Please enter a valid input. ")
 
     # INITIALIZE STUFF
 
@@ -198,7 +290,8 @@ def main():
     displayBoard(case_id_list_display, list_of_prizes_display)
     print("Pick your case. You'll keep this case for the whole game.")
     players_case = pick_case(case_id_list_display)
-    print("You chose case #", players_case)
+    print("You chose case #", players_case, "\n")
+    time.sleep(1)
     if players_case < 10:
         case_id_list_display[case_id_list_display.index(players_case)] = "*"  # to distinguish it in display
     else:
@@ -211,7 +304,7 @@ def main():
     gameOn = True # stays true until player accepts deal or there is one case left
     while gameOn:
         if r < 10:
-            print("Round", r)
+            print("Round", r, "\n")
             if r < 6: # first 5 rounds, when more than 1 case will have to be eliminated
                 num_cases_to_eliminate = 7-r # number of cases decreases as rounds increase
             elif r >= 6: # at round 6 and later
@@ -222,21 +315,28 @@ def main():
 
             # figure out banker's offer
             offer = get_offer(list_of_prizes_display)
-            print("Banker's Offer: ", offer)
+            print("Banker making offer")
+            drumroll()
+            print("The banker offers you", offer, "points.")
 
             dond = "m" # get into while loop
             while dond != "1" and dond != "0":
                 dond = input("Deal or No Deal? Enter 1 for Deal. Enter 0 for No Deal.\n> ")
                 if dond == "1":
                     gameOn = False # stop looping through the rounds
-                    print("Deal.")
+                    print("You chose Deal.")
+                    time.sleep(1)
                     print("You won", offer, "points!")
-                    winnings = offer
+                    new_game = game(game_id, player_id, player_email, "D", r, offer) # create game object
+                    new_game.write_to_file() # write that object into the file
                 elif dond == "0":
-                    print("No Deal.")
+                    print("You chose No Deal.")
+                    time.sleep(1)
                     displayBoard(case_id_list_display, list_of_prizes_display)
                 else:
                     print("Please enter either 1 or 0. ")
+            new_round = round(game_id, player_id, player_email, r, offer, get_prizes_left(list_of_prizes_display))
+            new_round.write_to_file()
         else:
             # find last case:
             for case_id in case_id_list_display:
@@ -252,12 +352,20 @@ def main():
                     players_case = lastcase
                     print("Your case is now case # " + str(players_case))
                     winnings = case_values[players_case]
-                    print("You won...", winnings, "points!")
+                    print("You won...")
+                    drumroll()
+                    print(winnings, "points!")
+                    new_game = game(game_id, player_id, player_email, "ND", r, winnings)  # create game object
+                    new_game.write_to_file()  # write that object into the file
                     gameOn = False
                 elif userswitch == "0":
                     print("You chose to keep your case.")
                     winnings = case_values[players_case]
-                    print("You won...", winnings, "points!")
+                    print("You won...")
+                    drumroll()
+                    print(winnings, "points!")
+                    new_game = game(game_id, player_id, player_email, "ND" , r, winnings)  # create game object
+                    new_game.write_to_file()  # write that object into the file
                     gameOn = False
                 else:
                     print("Please enter either 1 or 0.")
