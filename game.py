@@ -1,7 +1,47 @@
 # This is a Python version of the game Deal or No Deal.
-
+import math
 import random
+import statistics
 import time
+
+class datarow:
+    # just a super class from which game and round inherit since both are types of data
+    def __init__(self, game_id, player_id, player_email):
+        self.game_id = game_id
+        self.player_id = player_id
+        self.player_email = player_email
+
+
+class game(datarow):
+    """
+    holds data about one played game
+    """
+    def __init__(self, game_id, player_id, player_email, end_result, stop_round, winnings):
+        super().__init__(game_id, player_id, player_email)
+        self.stop_round = stop_round
+        self.end_result = end_result
+        self.winnings = winnings
+
+    def write_to_file(self):
+        # append to data file
+        with open("played_data.txt", "a") as f_in:
+            f_in.write(str(self.game_id) + "\t" + str(self.player_id) + "\t" + self.player_email + "\t" + self.end_result + "\t" + str(self.stop_round) + "\t" + str(self.winnings) + "\n")
+
+
+class round(datarow):
+    """
+    holds data about one round played by a player
+    """
+    def __init__(self, game_id, player_id, player_email, round, bankers_offer, remaining_cases):
+        super().__init__(game_id, player_id, player_email)
+        self.round = round
+        self.bankers_offer = bankers_offer
+        self.remaining_cases = remaining_cases
+
+    def write_to_file(self):
+        # append to data file
+        with open("round_data.txt", "a") as f_in:
+            f_in.write(str(self.game_id) + "\t" + str(self.player_id) + "\t" + self.player_email + "\t" + str(self.round) + "\t" + str(self.bankers_offer) + "\t" + str(self.remaining_cases) + "\n")
 
 
 def pick_case(case_id_list_display):
@@ -158,7 +198,7 @@ def get_prizes_left(list_of_prizes_display):
     return prizes_left
 
 
-def get_offer(list_of_prizes_display):
+def get_offer(list_of_prizes_display, game_mode, round):
     """
     This function calculates the banker's offer.
     :param list_of_prizes_display: list of prizes displayed
@@ -169,51 +209,20 @@ def get_offer(list_of_prizes_display):
     for prize in prizes_left:
         sum += prize
 
+    ev = sum / len(prizes_left)  # find average case value
     # basic 0.8 algorithm:
-    avg = sum / len(prizes_left) # find average case value
-    avg *= 0.8
-    return int(avg)
-
-
-class datarow:
-    # just a super class from which game and round inherit since both are types of data
-    def __init__(self, game_id, player_id, player_email):
-        self.game_id = game_id
-        self.player_id = player_id
-        self.player_email = player_email
-
-
-class game(datarow):
-    """
-    holds data about one played game
-    """
-    def __init__(self, game_id, player_id, player_email, end_result, stop_round, winnings):
-        super().__init__(game_id, player_id, player_email)
-        self.stop_round = stop_round
-        self.end_result = end_result
-        self.winnings = winnings
-
-    def write_to_file(self):
-        # append to data file
-        with open("played_data.txt", "a") as f_in:
-            f_in.write(str(self.game_id) + "\t" + str(self.player_id) + "\t" + self.player_email + "\t" + self.end_result + "\t" + str(self.stop_round) + "\t" + str(self.winnings) + "\n")
-
-
-class round(datarow):
-    """
-    holds data about one round played by a player
-    """
-    def __init__(self, game_id, player_id, player_email, round, bankers_offer, remaining_cases):
-        super().__init__(game_id, player_id, player_email)
-        self.round = round
-        self.bankers_offer = bankers_offer
-        self.remaining_cases = remaining_cases
-
-    def write_to_file(self):
-        # append to data file
-        with open("round_data.txt", "a") as f_in:
-            f_in.write(str(self.game_id) + "\t" + str(self.player_id) + "\t" + self.player_email + "\t" + str(self.round) + "\t" + str(self.bankers_offer) + "\t" + str(self.remaining_cases) + "\n")
-
+    if game_mode == 1:
+        return int(ev*0.8)
+    # banker's offer algorithm from Chen and John 2018
+    elif game_mode == 2:
+        sd = statistics.pstdev(prizes_left)
+        cv = sd/ev
+        log10ev = math.log10(ev)
+        log10bo = 0.195 + 0.991*log10ev - 0.057*cv - 0.037*len(prizes_left)
+    # constantly increase ratio
+    elif game_mode == 3:
+        ratio = 0.5 + round/20.0
+        return int(ev*ratio)
 
 def drumroll():
     # creates a little countdown for dramatic effect
@@ -244,7 +253,9 @@ def create_game_id():
             return id
             generateNew = False # no need to generate another one
 
+
 def main():
+    print("gamemode:", game_mode)
     # WELCOME
     print("Welcome to Deal or No Deal!")
     time.sleep(1)
@@ -257,7 +268,14 @@ def main():
     while instr != "0":
         instr = input("> ")
         if instr == "1":
-            print("[instructions].\nEnter 0 to start. ") # fill in later
+            print("How the game works:")
+            print("There are 26 briefcases on the board. Each case contains an unknown amount of points,", end=" ")
+            print("ranging from 0.01 to 1,000,000 points. At the very beginning, you will choose one case", end=" ")
+            print("to be your case. You will not know what is in this case.")
+            print("Every round, you will have to eliminate a number of cases from the board. The case will", end=" ")
+            print("be opened, revealing the number of points it contained. If you keep eliminating cases until", end=" ")
+
+            print("Enter 0 to start. ") # fill in later
         elif instr == "0":
             print("Let's play Deal or No Deal!") # start game
             time.sleep(1)
@@ -265,6 +283,9 @@ def main():
             print("Please enter a valid input. ")
 
     # INITIALIZE STUFF
+
+    # determine game mode
+    game_mode = random.randint(1, 3)
 
     # create a list of case id's
     case_id_list = [] # will contain ints 1-26
@@ -314,7 +335,7 @@ def main():
             # works up to here
 
             # figure out banker's offer
-            offer = get_offer(list_of_prizes_display)
+            offer = get_offer(list_of_prizes_display, game_mode, r)
             print("Banker making offer")
             drumroll()
             print("The banker offers you", offer, "points.")
@@ -327,6 +348,8 @@ def main():
                     print("You chose Deal.")
                     time.sleep(1)
                     print("You won", offer, "points!")
+                    time.sleep(1)
+                    print("Your case contained", case_values[players_case])
                     new_game = game(game_id, player_id, player_email, "D", r, offer) # create game object
                     new_game.write_to_file() # write that object into the file
                 elif dond == "0":
