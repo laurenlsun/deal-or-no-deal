@@ -5,19 +5,20 @@ import statistics
 import time
 
 class datarow:
-    # just a super class from which game and round inherit since both are types of data
-    def __init__(self, game_id, player_id, player_email):
+    # just a super class from which game and round inherit because both are types of data
+    def __init__(self, game_id, player_id, player_email, game_mode):
         self.game_id = game_id
         self.player_id = player_id
         self.player_email = player_email
+        self.game_mode = game_mode
 
 
 class game(datarow):
     """
     holds data about one played game
     """
-    def __init__(self, game_id, player_id, player_email, end_result, stop_round, winnings):
-        super().__init__(game_id, player_id, player_email)
+    def __init__(self, game_id, player_id, player_email, game_mode, end_result, stop_round, winnings):
+        super().__init__(game_id, player_id, player_email, game_mode)
         self.stop_round = stop_round
         self.end_result = end_result
         self.winnings = winnings
@@ -25,15 +26,15 @@ class game(datarow):
     def write_to_file(self):
         # append to data file
         with open("played_data.txt", "a") as f_in:
-            f_in.write(str(self.game_id) + "\t" + str(self.player_id) + "\t" + self.player_email + "\t" + self.end_result + "\t" + str(self.stop_round) + "\t" + str(self.winnings) + "\n")
+            f_in.write(str(self.game_id) + "\t" + str(self.player_id) + "\t" + self.player_email + "\t" + str(self.game_mode) + "\t" + self.end_result + "\t" + str(self.stop_round) + "\t" + str(self.winnings) + "\n")
 
 
 class round(datarow):
     """
     holds data about one round played by a player
     """
-    def __init__(self, game_id, player_id, player_email, round, bankers_offer, remaining_cases):
-        super().__init__(game_id, player_id, player_email)
+    def __init__(self, game_id, player_id, player_email, game_mode, round, bankers_offer, remaining_cases):
+        super().__init__(game_id, player_id, player_email, game_mode)
         self.round = round
         self.bankers_offer = bankers_offer
         self.remaining_cases = remaining_cases
@@ -41,7 +42,7 @@ class round(datarow):
     def write_to_file(self):
         # append to data file
         with open("round_data.txt", "a") as f_in:
-            f_in.write(str(self.game_id) + "\t" + str(self.player_id) + "\t" + self.player_email + "\t" + str(self.round) + "\t" + str(self.bankers_offer) + "\t" + str(self.remaining_cases) + "\n")
+            f_in.write(str(self.game_id) + "\t" + str(self.player_id) + "\t" + self.player_email + "\t" + str(self.game_mode) + "\t" + str(self.round) + "\t" + str(self.bankers_offer) + "\t" + str(self.remaining_cases) + "\n")
 
 
 def pick_case(case_id_list_display):
@@ -193,12 +194,12 @@ def get_prizes_left(list_of_prizes_display):
     """
     prizes_left = []
     for prize in list_of_prizes_display: # go through display prize list
-        if str(prize).isnumeric(): # if entry contains number (ie still in play)
+        if str(prize).isnumeric() or prize == 0.01: # if entry contains number (ie still in play)
             prizes_left.append(prize) # add to list
     return prizes_left
 
 
-def get_offer(list_of_prizes_display, game_mode, round):
+def get_bank_offer(list_of_prizes_display, game_mode, round):
     """
     This function calculates the banker's offer.
     :param list_of_prizes_display: list of prizes displayed
@@ -214,13 +215,15 @@ def get_offer(list_of_prizes_display, game_mode, round):
     if game_mode == 1:
         return int(ev*0.8)
     # banker's offer algorithm from Chen and John 2018
-    elif game_mode == 2:
+    elif game_mode == 2 or game_mode == 4:
         sd = statistics.pstdev(prizes_left)
         cv = sd/ev
         log10ev = math.log10(ev)
         log10bo = 0.195 + 0.991*log10ev - 0.057*cv - 0.037*len(prizes_left)
+        bo = math.pow(10, log10bo)
+        return int(bo)
     # constantly increase ratio
-    elif game_mode == 3:
+    else: # game mode 3
         ratio = 0.5 + round/20.0
         return int(ev*ratio)
 
@@ -253,29 +256,116 @@ def create_game_id():
             return id
             generateNew = False # no need to generate another one
 
+def early_round_eliminate_cases(r, case_id_list_display, list_of_prizes_display, case_values):
+    """
+    eliminating cases during rounds 1-6
+    :param r: round (int)
+    :param case_id_list_display: list of cases for gui display
+    :param list_of_prizes_display: list of prizes on right hand side
+    :param case_values: dict w/case values
+    :return: none
+    """
+    print("Round", r, "\n")
+    if r < 6:  # first 5 rounds, when more than 1 case will have to be eliminated
+        num_cases_to_eliminate = 7 - r  # number of cases decreases as rounds increase
+    elif r >= 6:  # at round 6 and later
+        num_cases_to_eliminate = 1  # only 1 to eliminate
+    displayBoard(case_id_list_display, list_of_prizes_display)  # show board
+    eliminate_case(num_cases_to_eliminate, case_id_list_display, list_of_prizes_display,
+                   case_values)  # remove needed cases
+
+
+def get_player_offer():
+    """
+    obtains player offer
+    :return: player offer (int)
+    """
+    print("Enter an offer for the banker. If the banker accepts, you will win whatever amount of points you have entered.\
+    \nIf it is too high, the banker will reject your offer.")
+    player_offer = input("> ")
+    while not player_offer.isnumeric(): # while non-int
+        print("Please enter an integer.")
+        player_offer = input("> ")
+    return int(player_offer)
+
+
+def deal(offer, case_values, players_case, game_id, player_id, player_email, r, game_mode):
+    time.sleep(1)
+    print("You won", offer, "points!")
+    time.sleep(1)
+    print("Your case contained", case_values[players_case])
+    new_game = game(game_id, player_id, player_email, game_mode, "D", r, offer)  # create game object
+    new_game.write_to_file()  # write that object into the file
+
+
+def print_instructions(game_mode):
+    print("How the game works: \
+    \nThere are 26 briefcases on the board. Each case contains an unknown amount of points, \
+ranging from 0.01 to 1,000,000 points. At the very beginning, you will choose one case to \
+be your case. You will not know what is in it until the end of the game. \nPress enter to continue. ")
+    userinput = input("") # ask something
+    print("Every round, you will have to eliminate a number of cases from the board. \
+The case will be opened, revealing the number of points it contained. By eliminating a \
+case, you eliminate the possibility of winning that prize.\nPress enter to continue. ")
+    userinput = input("")
+    if game_mode == 4:
+        print("You will make an offer at the end of every round after you have \
+eliminated cases. The banker will choose to accept your deal and you will win whatever \
+amount you offered (at which point the game ends), or he will decline your offer, and you must continue \
+eliminating more cases from the board. When/if the banker accepts the your offer, you will \
+also find out how much was in the case you originally chose.\nPress enter to continue. ")
+        userinput = input("")
+    else:
+        print("The banker will make you an offer at the end of every round after you have \
+eliminated cases. You may either choose to accept his deal and walk away with whatever \
+amount he offers (at which point the game ends), or you can decline his offer and continue \
+eliminating more cases from the board. When/if you accept the banker’s offer, you will \
+also find out how much was in the case you originally chose.\nPress enter to continue. ")
+        userinput = input("")
+    print("If you keep eliminating cases until there is one left on the board, you can choose \
+to either walk away with the case you originally chose or switch with the one left on the \
+board. Whichever one you choose will contain your prize.\nPress enter to continue. ")
+    userinput = input("")
 
 def main():
-    print("gamemode:", game_mode)
+
     # WELCOME
-    print("Welcome to Deal or No Deal!")
+    print("Welcome to Deal or No Deal! Zoom out (ctrl -) for a better display")
     time.sleep(1)
-    player_id = input("Please enter your USC ID: ")
-    player_email = input("Please enter your USC email: ")
+    # player_id = input("Please enter your USC ID: ")
+    # add error checking
+    # player_email = input("Please enter your USC email: ")
+    # add error checking
+    player_id = "7357" # test
+    player_email = "test@usc.edu"
     game_id = create_game_id()
 
-    instr = "m" # initialize input to enter the loop
+    # determine game mode
+    print("Which version of the game would you like to play? \
+          \nEnter 1 to play the banker's offer version (regular) \
+          \nEnter 2 to play the player's offer version")
+    game_mode = input("> ")
+    while game_mode != "1" and game_mode != "2":
+        game_mode = input("Please enter 1 or 2:\n> ")
+        print(game_mode)
+
+    if game_mode == "1":
+        print("Regular Version")
+        # generate 1 of 3 game modes
+        game_mode = random.randint(1, 3)
+    elif game_mode == "2":
+        # player's offer version
+        print("Player's Offer Version")
+        game_mode = 4
+    # random.randint(1, 4) # randomly generate
+
+    instr = "m"  # initialize input to enter the loop
     print("Enter 1 if you would like to read about how to play the game. Enter 0 to skip the tutorial.")
     while instr != "0":
         instr = input("> ")
         if instr == "1":
-            print("How the game works:")
-            print("There are 26 briefcases on the board. Each case contains an unknown amount of points,", end=" ")
-            print("ranging from 0.01 to 1,000,000 points. At the very beginning, you will choose one case", end=" ")
-            print("to be your case. You will not know what is in this case.")
-            print("Every round, you will have to eliminate a number of cases from the board. The case will", end=" ")
-            print("be opened, revealing the number of points it contained. If you keep eliminating cases until", end=" ")
-
-            print("Enter 0 to start. ") # fill in later
+            print_instructions(game_mode)
+            print("Enter 0 to start. Enter 1 to display the instructions again.")
         elif instr == "0":
             print("Let's play Deal or No Deal!") # start game
             time.sleep(1)
@@ -283,9 +373,6 @@ def main():
             print("Please enter a valid input. ")
 
     # INITIALIZE STUFF
-
-    # determine game mode
-    game_mode = random.randint(1, 3)
 
     # create a list of case id's
     case_id_list = [] # will contain ints 1-26
@@ -325,40 +412,44 @@ def main():
     gameOn = True # stays true until player accepts deal or there is one case left
     while gameOn:
         if r < 10:
-            print("Round", r, "\n")
-            if r < 6: # first 5 rounds, when more than 1 case will have to be eliminated
-                num_cases_to_eliminate = 7-r # number of cases decreases as rounds increase
-            elif r >= 6: # at round 6 and later
-                num_cases_to_eliminate = 1 # only 1 to eliminate
-            displayBoard(case_id_list_display, list_of_prizes_display) # show board
-            eliminate_case(num_cases_to_eliminate, case_id_list_display, list_of_prizes_display, case_values) # remove needed cases
-            # works up to here
-
-            # figure out banker's offer
-            offer = get_offer(list_of_prizes_display, game_mode, r)
-            print("Banker making offer")
-            drumroll()
-            print("The banker offers you", offer, "points.")
-
-            dond = "m" # get into while loop
-            while dond != "1" and dond != "0":
-                dond = input("Deal or No Deal? Enter 1 for Deal. Enter 0 for No Deal.\n> ")
-                if dond == "1":
+            early_round_eliminate_cases(r, case_id_list_display, list_of_prizes_display, case_values) # play rounds 1-6
+            bank_offer = get_bank_offer(list_of_prizes_display, game_mode, r) # obtain bank offer
+            if game_mode == 4: # player offer mode
+                displayBoard(case_id_list_display, list_of_prizes_display)
+                player_offer = get_player_offer() # obtain player offer
+                offer = player_offer # so it can be saved to a new round
+                print("Banker deciding...")
+                drumroll()
+                if player_offer < bank_offer/2: # extremely low offer
+                    # deal
+                    print("Offer accepted.")
                     gameOn = False # stop looping through the rounds
-                    print("You chose Deal.")
-                    time.sleep(1)
-                    print("You won", offer, "points!")
-                    time.sleep(1)
-                    print("Your case contained", case_values[players_case])
-                    new_game = game(game_id, player_id, player_email, "D", r, offer) # create game object
-                    new_game.write_to_file() # write that object into the file
-                elif dond == "0":
-                    print("You chose No Deal.")
-                    time.sleep(1)
-                    displayBoard(case_id_list_display, list_of_prizes_display)
+                    deal(player_offer, case_values, players_case, game_id, player_id, player_email, r, game_mode)
                 else:
-                    print("Please enter either 1 or 0. ")
-            new_round = round(game_id, player_id, player_email, r, offer, get_prizes_left(list_of_prizes_display))
+                    # no deal
+                    print("Offer rejected.")
+                    time.sleep(1)
+            else: # bank offer mode
+                displayBoard(case_id_list_display, list_of_prizes_display)
+                print("Banker making offer")
+                drumroll()
+                print("Offer:", bank_offer)
+                offer = bank_offer # so it can be saved to a new round
+                dond = "m" # get into while loop
+                while dond != "1" and dond != "0":
+                    dond = input("Deal or No Deal? Enter 1 for Deal. Enter 0 for No Deal.\n> ")
+                    if dond == "1":
+                        print("You chose Deal.")
+                        gameOn = False # stop looping through the rounds
+                        deal(bank_offer, case_values, players_case, game_id, player_id, player_email, r, game_mode)
+                    elif dond == "0":
+                        print("You chose No Deal.")
+                        time.sleep(1)
+                        displayBoard(case_id_list_display, list_of_prizes_display)
+                    else:
+                        print("Please enter either 1 or 0. ")
+            # save new round data
+            new_round = round(game_id, player_id, player_email, game_mode, r, offer, get_prizes_left(list_of_prizes_display))
             new_round.write_to_file()
         else:
             # find last case:
@@ -378,7 +469,7 @@ def main():
                     print("You won...")
                     drumroll()
                     print(winnings, "points!")
-                    new_game = game(game_id, player_id, player_email, "ND", r, winnings)  # create game object
+                    new_game = game(game_id, player_id, player_email, game_mode, "ND", r, winnings)  # create game object
                     new_game.write_to_file()  # write that object into the file
                     gameOn = False
                 elif userswitch == "0":
@@ -387,7 +478,7 @@ def main():
                     print("You won...")
                     drumroll()
                     print(winnings, "points!")
-                    new_game = game(game_id, player_id, player_email, "ND" , r, winnings)  # create game object
+                    new_game = game(game_id, player_id, player_email, game_mode, "ND" , r, winnings)  # create game object
                     new_game.write_to_file()  # write that object into the file
                     gameOn = False
                 else:
