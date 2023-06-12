@@ -4,12 +4,13 @@ import random
 import statistics
 import time
 
+id_list = []  # new id list
+
 class datarow:
     # just a super class from which game and round inherit because both are types of data
-    def __init__(self, game_id, player_id, player_email, game_mode):
+    def __init__(self, game_id, player_id, game_mode):
         self.game_id = game_id
         self.player_id = player_id
-        self.player_email = player_email
         self.game_mode = game_mode
 
 
@@ -17,8 +18,8 @@ class game(datarow):
     """
     holds data about one played game
     """
-    def __init__(self, game_id, player_id, player_email, game_mode, end_result, stop_round, winnings):
-        super().__init__(game_id, player_id, player_email, game_mode)
+    def __init__(self, game_id, player_id, game_mode, end_result, stop_round, winnings):
+        super().__init__(game_id, player_id, game_mode)
         self.stop_round = stop_round
         self.end_result = end_result
         self.winnings = winnings
@@ -26,15 +27,15 @@ class game(datarow):
     def write_to_file(self):
         # append to data file
         with open("played_data.txt", "a") as f_in:
-            f_in.write(str(self.game_id) + "\t" + str(self.player_id) + "\t" + self.player_email + "\t" + str(self.game_mode) + "\t" + self.end_result + "\t" + str(self.stop_round) + "\t" + str(self.winnings) + "\n")
+            f_in.write(str(self.game_id) + "\t" + str(self.player_id) + "\t" + "\t" + str(self.game_mode) + "\t" + self.end_result + "\t" + str(self.stop_round) + "\t" + str(self.winnings) + "\n")
 
 
 class round(datarow):
     """
     holds data about one round played by a player
     """
-    def __init__(self, game_id, player_id, player_email, game_mode, round, bankers_offer, remaining_cases):
-        super().__init__(game_id, player_id, player_email, game_mode)
+    def __init__(self, game_id, player_id, game_mode, round, bankers_offer, remaining_cases):
+        super().__init__(game_id, player_id, game_mode)
         self.round = round
         self.bankers_offer = bankers_offer
         self.remaining_cases = remaining_cases
@@ -42,7 +43,7 @@ class round(datarow):
     def write_to_file(self):
         # append to data file
         with open("round_data.txt", "a") as f_in:
-            f_in.write(str(self.game_id) + "\t" + str(self.player_id) + "\t" + self.player_email + "\t" + str(self.game_mode) + "\t" + str(self.round) + "\t" + str(self.bankers_offer) + "\t" + str(self.remaining_cases) + "\n")
+            f_in.write(str(self.game_id) + "\t" + str(self.player_id) + "\t" + "\t" + str(self.game_mode) + "\t" + str(self.round) + "\t" + str(self.bankers_offer) + "\t" + str(self.remaining_cases) + "\n")
 
 
 def pick_case(case_id_list_display):
@@ -182,8 +183,9 @@ def eliminate_case(num_cases_to_eliminate, case_id_list_display, list_of_prizes_
         remove_id_from_display(eliminated_case, case_id_list_display)
         remove_prize_from_display(eliminated_case, list_of_prizes_display, case_values)
         if (num_cases_to_eliminate - 1 - i) != 0: # if that wasn't the last case to be chosen
-            print("Choose", num_cases_to_eliminate - 1 - i, "more.")
             displayBoard(case_id_list_display, list_of_prizes_display)
+            print("Choose", num_cases_to_eliminate - 1 - i, "more.")
+
 
 
 def get_prizes_left(list_of_prizes_display):
@@ -235,13 +237,12 @@ def drumroll():
         time.sleep(0.25)
 
 
-def create_game_id():
+def create_id():
     """
     This function generates a number 10000-99999 as a unique game id.
     It checks if ID was used before.
     :return: a unique ID
     """
-    id_list = [] # new list
     with open("played_data.txt", "r") as f_in: # from past game data
         for line in f_in: # loop through lines
             id = line[:5] # set id as first 5 characters of the line
@@ -289,95 +290,105 @@ def get_player_offer():
     return int(player_offer)
 
 
-def deal(offer, case_values, players_case, game_id, player_id, player_email, r, game_mode):
+def deal(offer, case_values, players_case, game_id, player_id, r, game_mode):
     time.sleep(1)
     print("You won", offer, "points!")
     time.sleep(1)
     print("Your case contained", case_values[players_case])
-    new_game = game(game_id, player_id, player_email, game_mode, "D", r, offer)  # create game object
+    print()
+    new_game = game(game_id, player_id, game_mode, "D", r, offer)  # create game object
     new_game.write_to_file()  # write that object into the file
 
 
 def print_instructions(game_mode):
-    print("How the game works: \
+    print("\nHere's how the game works: \
     \nThere are 26 briefcases on the board. Each case contains an unknown amount of points, \
-ranging from 0.01 to 1,000,000 points. At the very beginning, you will choose one case to \
-be your case. You will not know what is in it until the end of the game. \nPress enter to continue. ")
+ranging from 0.01 to 1,000,000 points. An unopened case will look like this:")
+    print(" ---- ")
+    print("| 19 |")
+    print(" ---- ")
+    print("The remaining prizes will be displayed to the right.")
+    print("Press enter to continue.")
+    userinput = input("")
+    print("At the very beginning, you will choose one case to be your case. \n\
+You will not know what is in it until the end of the game. \
+It will be labeled on the board with an asterisk:")
+    print(" --- ")
+    print("| * |")
+    print(" --- ")
+    print("Press enter to continue. ")
     userinput = input("") # ask something
-    print("Every round, you will have to eliminate a number of cases from the board. \
-The case will be opened, revealing the number of points it contained. By eliminating a \
+    print("Every round, you will have to eliminate a number of cases from the board.\n\
+The case will be opened, revealing the number of points it contained. By eliminating a\n\
 case, you eliminate the possibility of winning that prize.\nPress enter to continue. ")
     userinput = input("")
     if game_mode == 4:
-        print("You will make an offer at the end of every round after you have \
-eliminated cases. The banker will choose to accept your deal and you will win whatever \
-amount you offered (at which point the game ends), or he will decline your offer, and you must continue \
-eliminating more cases from the board. When/if the banker accepts the your offer, you will \
+        print("PLAYER'S OFFER MODE: You will make an offer at the end of every round after you have \
+eliminated cases. \nThe banker will choose to accept your deal and you will win whatever \
+amount you offered (at which point the game ends),\nor he will decline your offer, and you must continue \
+eliminating more cases from the board.\nPress enter to continue")
+        userinput = input("")
+        print("When/if the banker accepts the your offer, you will \
 also find out how much was in the case you originally chose.\nPress enter to continue. ")
         userinput = input("")
     else:
-        print("The banker will make you an offer at the end of every round after you have \
-eliminated cases. You may either choose to accept his deal and walk away with whatever \
-amount he offers (at which point the game ends), or you can decline his offer and continue \
-eliminating more cases from the board. When/if you accept the banker’s offer, you will \
+        print("BANKER'S OFFER MODE: The banker will make you an offer at the end of every round after you have \
+eliminated cases. \nYou may either choose to accept his deal and walk away with whatever \
+amount he offers (at which point the game ends), \nor you can decline his offer and continue \
+eliminating more cases from the board.\nPress enter to continue")
+        userinput = input("")
+        print("When/if you accept the banker’s offer, you will \
 also find out how much was in the case you originally chose.\nPress enter to continue. ")
         userinput = input("")
-    print("If you keep eliminating cases until there is one left on the board, you can choose \
+    print("If you keep eliminating cases until there is one left on the board, \nyou can choose \
 to either walk away with the case you originally chose or switch with the one left on the \
-board. Whichever one you choose will contain your prize.\nPress enter to continue. ")
+board. \nWhichever one you choose will contain your prize winnings. \
+\nPress enter to start the game. ")
     userinput = input("")
 
-def main():
 
-    # WELCOME
-    print("Welcome to Deal or No Deal! Zoom out (ctrl -) for a better display")
+def play(game_mode, first_time, player_id):
+    print("Press enter to begin the ", end="")
+    if first_time:
+        print("first", end="")
+    else:
+        print("second", end="")
+    print(" game.")
+    userinput = input("")
+    game_id = create_id()
+    if game_mode == 1:
+        print("You are now playing the banker's offer version")
+        game_mode = random.randint(1, 3)  # pick from 3 algorithms to generate banker's offer
+    elif game_mode == 2:
+        print("You are now playing the player's offer version.")
+        game_mode = 4 # no alg
     time.sleep(1)
-    # player_id = input("Please enter your USC ID: ")
-    # add error checking
-    # player_email = input("Please enter your USC email: ")
-    # add error checking
-    player_id = "7357" # test
-    player_email = "test@usc.edu"
-    game_id = create_game_id()
-
-    # determine game mode
-    print("Which version of the game would you like to play? \
-          \nEnter 1 to play the banker's offer version (regular) \
-          \nEnter 2 to play the player's offer version")
-    game_mode = input("> ")
-    while game_mode != "1" and game_mode != "2":
-        game_mode = input("Please enter 1 or 2:\n> ")
-        print(game_mode)
-
-    if game_mode == "1":
-        print("Regular Version")
-        # generate 1 of 3 game modes
-        game_mode = random.randint(1, 3)
-    elif game_mode == "2":
-        # player's offer version
-        print("Player's Offer Version")
-        game_mode = 4
-    # random.randint(1, 4) # randomly generate
-
-    instr = "m"  # initialize input to enter the loop
-    print("Enter 1 if you would like to read about how to play the game. Enter 0 to skip the tutorial.")
-    while instr != "0":
-        instr = input("> ")
-        if instr == "1":
-            print_instructions(game_mode)
-            print("Enter 0 to start. Enter 1 to display the instructions again.")
-        elif instr == "0":
-            print("Let's play Deal or No Deal!") # start game
-            time.sleep(1)
-        else:
-            print("Please enter a valid input. ")
+    # INSTRUCTIONS
+    # instr = "m"  # initialize input to enter the loop
+    # print("Enter 1 if you would like to read about how to play the ", end="")
+    # if game_mode == 4:
+    #     print("player's", end="")
+    # else:
+    #     print("banker's", end="")
+    # print(" offer version. Enter 0 to skip the instructions.")
+    # while instr != "0":
+    #     instr = input("> ")
+    #     if instr == "1":
+    #         print_instructions(game_mode)
+    #         print("Enter 0 to start. Enter 1 to display the instructions again.")
+    #     elif instr == "0":
+    #         print("Let's play Deal or No Deal!")  # start game
+    #         time.sleep(1)
+    #     else:
+    #         print("Please enter a valid input. ")
+    print_instructions(game_mode)
 
     # INITIALIZE STUFF
 
     # create a list of case id's
-    case_id_list = [] # will contain ints 1-26
+    case_id_list = []  # will contain ints 1-26
     for i in range(1, 27):
-        case_id_list.append(i) # populate with ints 1-26
+        case_id_list.append(i)  # populate with ints 1-26
 
     # create copy for display
     case_id_list_display = []
@@ -408,40 +419,42 @@ def main():
 
     # START ROUNDS
 
-    r = 1 # initialize round number
-    gameOn = True # stays true until player accepts deal or there is one case left
+    r = 1  # initialize round number
+    gameOn = True  # stays true until player accepts deal or there is one case left
     while gameOn:
         if r < 10:
-            early_round_eliminate_cases(r, case_id_list_display, list_of_prizes_display, case_values) # play rounds 1-6
-            bank_offer = get_bank_offer(list_of_prizes_display, game_mode, r) # obtain bank offer
-            if game_mode == 4: # player offer mode
+            early_round_eliminate_cases(r, case_id_list_display, list_of_prizes_display, case_values)  # play rounds 1-6
+            bank_offer = get_bank_offer(list_of_prizes_display, game_mode, r)  # obtain bank offer
+            if game_mode == 4:  # player offer mode
                 displayBoard(case_id_list_display, list_of_prizes_display)
-                player_offer = get_player_offer() # obtain player offer
-                offer = player_offer # so it can be saved to a new round
+                player_offer = get_player_offer()  # obtain player offer
+                offer = player_offer  # so it can be saved to a new round
                 print("Banker deciding...")
                 drumroll()
-                if player_offer < bank_offer/2: # extremely low offer
+                if player_offer < bank_offer / 2:  # extremely low offer
                     # deal
                     print("Offer accepted.")
-                    gameOn = False # stop looping through the rounds
-                    deal(player_offer, case_values, players_case, game_id, player_id, player_email, r, game_mode)
+                    winnings = player_offer
+                    gameOn = False  # stop looping through the rounds
+                    deal(player_offer, case_values, players_case, game_id, player_id, r, game_mode)
                 else:
                     # no deal
                     print("Offer rejected.")
                     time.sleep(1)
-            else: # bank offer mode
+            else:  # bank offer mode
                 displayBoard(case_id_list_display, list_of_prizes_display)
                 print("Banker making offer")
                 drumroll()
                 print("Offer:", bank_offer)
-                offer = bank_offer # so it can be saved to a new round
-                dond = "m" # get into while loop
+                offer = bank_offer  # so it can be saved to a new round
+                dond = "m"  # get into while loop
                 while dond != "1" and dond != "0":
                     dond = input("Deal or No Deal? Enter 1 for Deal. Enter 0 for No Deal.\n> ")
                     if dond == "1":
                         print("You chose Deal.")
-                        gameOn = False # stop looping through the rounds
-                        deal(bank_offer, case_values, players_case, game_id, player_id, player_email, r, game_mode)
+                        winnings = bank_offer
+                        gameOn = False  # stop looping through the rounds
+                        deal(bank_offer, case_values, players_case, game_id, player_id, r, game_mode)
                     elif dond == "0":
                         print("You chose No Deal.")
                         time.sleep(1)
@@ -449,17 +462,19 @@ def main():
                     else:
                         print("Please enter either 1 or 0. ")
             # save new round data
-            new_round = round(game_id, player_id, player_email, game_mode, r, offer, get_prizes_left(list_of_prizes_display))
+            new_round = round(game_id, player_id, game_mode, r, offer, get_prizes_left(list_of_prizes_display))
             new_round.write_to_file()
         else:
             # find last case:
             for case_id in case_id_list_display:
                 if str(case_id).isnumeric():
                     lastcase = case_id
-            print("There is 1 case left on the board, case # " + str(lastcase) + " . You chose case #", players_case, "at the beginning.")
-            print("Do you wish to walk away with the amount in your case or switch it with case # " + str(lastcase) + "?")
+            print("There is 1 case left on the board, case # " + str(lastcase) + " . You chose case #", players_case,
+                  "at the beginning.")
+            print(
+                "Do you wish to walk away with the amount in your case or switch it with case # " + str(lastcase) + "?")
             userswitch = "m"
-            while userswitch != "1" and userswitch != "0": # keep asking until user enters either 1 or 0
+            while userswitch != "1" and userswitch != "0":  # keep asking until user enters either 1 or 0
                 userswitch = input("Enter 1 to switch or enter 0 to keep your case.\n> ")
                 if userswitch == "1":
                     print("Switching cases...")
@@ -469,7 +484,7 @@ def main():
                     print("You won...")
                     drumroll()
                     print(winnings, "points!")
-                    new_game = game(game_id, player_id, player_email, game_mode, "ND", r, winnings)  # create game object
+                    new_game = game(game_id, player_id, game_mode, "ND", r, winnings)  # create game object
                     new_game.write_to_file()  # write that object into the file
                     gameOn = False
                 elif userswitch == "0":
@@ -478,14 +493,88 @@ def main():
                     print("You won...")
                     drumroll()
                     print(winnings, "points!")
-                    new_game = game(game_id, player_id, player_email, game_mode, "ND" , r, winnings)  # create game object
+                    new_game = game(game_id, player_id, game_mode, "ND", r, winnings)  # create game object
                     new_game.write_to_file()  # write that object into the file
                     gameOn = False
                 else:
                     print("Please enter either 1 or 0.")
         r += 1
-    print("Thanks for playing :)")
+    print("You have finished playing the ", end="")
+    if game_mode == 4:
+        print("player's ", end="")
+    else:
+        print("banker's ", end="")
+    print("offer mode. ")
+    if first_time:
+        print("You will now play the ", end="")
+        if game_mode == 4:
+            print("banker's ", end="")
+        else:
+            print("player's ", end="")
+        print("offer mode. ")
+        time.sleep(2)
+    return winnings, game_id
 
+
+def print_intro():
+    print("\nWe thank you for participating in our study. \nToday you will play 2 modified versions of Deal or No Deal. \
+Instructions on how to play will follow. \nClick the blank space below so that a cursor appears and press enter to continue.")
+    userinput = input("")
+    print("Playing this game is voluntary, and you may stop at any time, though you will not receive \
+compensation unless you reach the end of both games.\nPress enter to continue.")
+    userinput = input("")
+    print("In each game, you can win up to 1,000,000 points. Your final score will be divided by 100,000, \
+converted to dollars, and added to your compensation for your participation.\nFor example, if you win a total \
+of 623,211 points, you will be awarded an additional $6.23.\nPress enter to continue.")
+    userinput = input("")
+    print("Please do not refresh the web browser page or click the \"Run\" button while you play.\
+\nDoing so will cause you to lose your progress.\nPress enter to continue.")
+    userinput = input("")
+
+def main():
+    # WELCOME
+    print("Welcome to Deal or No Deal! Full screen and zoom out (ctrl -) for a better display")
+    time.sleep(1)
+    print_intro()
+
+    # player_id = input("Please enter your USC ID: ")
+    # add error checking
+    player_id = create_id()
+
+    # determine game mode
+    # print("Which version of the game would you like to play? \
+    #       \nEnter 1 to play the banker's offer version (regular) \
+    #       \nEnter 2 to play the player's offer version")
+    # game_mode = input("> ")
+    # while game_mode != "1" and game_mode != "2":
+    #     game_mode = input("Please enter 1 or 2:\n> ")
+    #     print(game_mode)
+    #
+    # if game_mode == "1":
+    #     print("Regular Version")
+    #     # generate 1 of 3 game modes
+    #     game_mode = random.randint(1, 3)
+    # elif game_mode == "2":
+    #     # player's offer version
+    #     print("Player's Offer Version")
+    #     game_mode = 4
+
+    game_mode1 = random.randint(1, 2)  # randomly generate order in which to play
+    if game_mode1 == 1:
+        game_mode2 = 2
+    elif game_mode1 ==2:
+        game_mode2 = 1
+    winnings1, game_id1 = play(game_mode1, True, player_id)
+    winnings2, game_id2 = play(game_mode2, False, player_id)
+
+    # concluding message.
+    print("This concludes your participation in the study. Because you won", winnings1, "points during the first game \
+and", winnings2, "in the second game for a total of", str(winnings1+winnings2), "points, you will be compensated an \
+additional $" + str(0.00001*(winnings1+winnings2)) + ". Thanks for playing :)")
+    time.sleep(1)
+    print("Your player ID was saved as", player_id, \
+"and your game ID's were saved as", game_id1, "and", str(game_id2) +". These serve as confirmation that you have completed \
+two games. \nIf you have questions/concerns regarding this study, please email sunlaure [at] usc [dot] edu.")
 
 if __name__ == "__main__":
     main()
