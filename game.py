@@ -145,6 +145,30 @@ def displayBoard(case_id_list_display, list_of_prizes_display):
     print('      ------     ------     ------     ------     ------     ------ ')
 
 
+def displayPrizes(list_of_prizes_display):
+    """
+    This function prints the prizes left
+    :param list_of_prizes_display: list with prizes left
+    :return: nothing
+    """
+    print("Remaining Prizes:")
+    print()
+    print(list_of_prizes_display[0], '           ', list_of_prizes_display[13])
+    print(list_of_prizes_display[1], '           ', list_of_prizes_display[14])
+    print(list_of_prizes_display[2], '          ', list_of_prizes_display[15])
+    print(list_of_prizes_display[3], '          ', list_of_prizes_display[16])
+    print(list_of_prizes_display[4], '          ', list_of_prizes_display[17])
+    print(list_of_prizes_display[5], '          ', list_of_prizes_display[18])
+    print(list_of_prizes_display[6], '         ', list_of_prizes_display[19])
+    print(list_of_prizes_display[7], '         ', list_of_prizes_display[20])
+    print(list_of_prizes_display[8], '         ', list_of_prizes_display[21])
+    print(list_of_prizes_display[9], '         ', list_of_prizes_display[22])
+    print(list_of_prizes_display[10], '         ', list_of_prizes_display[23])
+    print(list_of_prizes_display[11], '         ', list_of_prizes_display[24])
+    print(list_of_prizes_display[12], '        ', list_of_prizes_display[25])
+    print()
+
+
 def fill_case_values(case_id_list, list_of_prizes, case_values):
     """
     randomly assigns each case id to a prize and saves it to case_values dictionary
@@ -178,7 +202,7 @@ def eliminate_case(num_cases_to_eliminate, case_id_list_display, list_of_prizes_
         print("Opening case:")
         drumroll()
         print(case_values[eliminated_case], "has been eliminated.")
-        time.sleep(1)
+        userinput = input("Press enter to continue.\n")
         # update displays:
         remove_id_from_display(eliminated_case, case_id_list_display)
         remove_prize_from_display(eliminated_case, list_of_prizes_display, case_values)
@@ -426,7 +450,7 @@ def play(game_mode, first_time, player_id):
             early_round_eliminate_cases(r, case_id_list_display, list_of_prizes_display, case_values)  # play rounds 1-6
             bank_offer = get_bank_offer(list_of_prizes_display, game_mode, r)  # obtain bank offer
             if game_mode == 4:  # player offer mode
-                displayBoard(case_id_list_display, list_of_prizes_display)
+                displayPrizes(list_of_prizes_display)
                 player_offer = get_player_offer()  # obtain player offer
                 offer = player_offer  # so it can be saved to a new round
                 print("Banker deciding...")
@@ -442,7 +466,7 @@ def play(game_mode, first_time, player_id):
                     print("Offer rejected.")
                     time.sleep(1)
             else:  # bank offer mode
-                displayBoard(case_id_list_display, list_of_prizes_display)
+                displayPrizes(list_of_prizes_display)
                 print("Banker making offer")
                 drumroll()
                 print("Offer:", bank_offer)
@@ -518,7 +542,7 @@ def play(game_mode, first_time, player_id):
 
 def print_intro():
     print("\nWe thank you for participating in our study. \nToday you will play 2 modified versions of Deal or No Deal. \
-Instructions on how to play will follow. \nClick the blank space below so that a cursor appears and press enter to continue.")
+Instructions on how to play will follow. \nClick the blank space below so that a blinking cursor appears and press enter to continue.")
     userinput = input("")
     print("Playing this game is voluntary, and you may stop at any time, though you will not receive \
 compensation unless you reach the end of both games.\nPress enter to continue.")
@@ -570,11 +594,11 @@ def main():
     # concluding message.
     print("This concludes your participation in the study. Because you won", winnings1, "points during the first game \
 and", winnings2, "in the second game for a total of", str(winnings1+winnings2), "points, you will be compensated an \
-additional $" + str(0.00001*(winnings1+winnings2)) + ". Thanks for playing :)")
+additional $" + str(round(0.00001*(winnings1+winnings2),2)) + ". Thanks for playing!")
     time.sleep(1)
     print("Your player ID was saved as", player_id, \
 "and your game ID's were saved as", game_id1, "and", str(game_id2) +". These serve as confirmation that you have completed \
-two games. \nIf you have questions/concerns regarding this study, please email sunlaure [at] usc [dot] edu.")
+two games. ")
 
 if __name__ == "__main__":
     main()
