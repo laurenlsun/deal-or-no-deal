@@ -1,2 +1,2 @@
 # deal-or-no-deal
-The hit gameshow Deal or No Deal in Python with modifications for research purposes. An additional gamemode was added which allows the player to propose an offer and the banker decides whether to accept or reject. Data is saved to 2 txt files, one which holds data about entire games, another which holds data about individual rounds played. 
+The hit gameshow Deal or No Deal in Python with modifications for research purposes. An additional gamemode was added which allows the player to propose an offer and the banker decides whether to accept or reject. Data is saved to a few txt files (one for data about entire games, one for data about individual rounds played, and one that records entry errors for players not paying attention)
