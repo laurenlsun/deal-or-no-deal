@@ -1,0 +1,15 @@
+game_id player_id   round   error
+90067	29294	0	chose case #kndf not numeric
+31990	29541	0	chose case #n not numeric
+31990	29541	0	chose case #32 not in range
+82243	51031	0	chose case #k not numeric
+82243	51031	0	chose case #40 not in range
+71077	73077	0	chose case #m not numeric
+24851	19530	0	chose case # not numeric
+24851	19530	1	chose case #m not numeric
+24851	19530	1	chose case #23 not available
+24851	19530	1	chose case #45 not in range
+24851	19530	1	chose case #0 not in range
+41892	66176	1	chose case #3 not available
+57545	36747	0	chose case # not numeric
+57545	36747	1	chose case #m not numeric
