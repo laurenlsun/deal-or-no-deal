@@ -4,6 +4,9 @@ import random
 import statistics
 import time
 
+import sqlite3 as sl
+db = "dond.db"
+
 id_list = []  # new id list
 
 class datarow:
@@ -24,28 +27,42 @@ class game(datarow):
         self.end_result = end_result
         self.winnings = winnings
 
-    def write_to_file(self):
+    def save(self):
         # append to data file
-        with open("played_data.txt", "a") as f_in:
-            f_in.write(str(self.game_id) + "\t" + str(self.player_id) + "\t" + "\t" + str(self.game_mode) + "\t" +
-                       self.end_result + "\t" + str(self.stop_round) + "\t" + str(self.winnings) + "\n")
+        # with open("played_data.txt", "a") as f_in:
+        #     f_in.write(str(self.game_id) + "\t" + str(self.player_id) + "\t" + "\t" + str(self.game_mode) + "\t" +
+        #                self.end_result + "\t" + str(self.stop_round) + "\t" + str(self.winnings) + "\n")
+        # open a connection
+        conn = sl.connect(db)
+        # get a cursor
+        curs = conn.execute("INSERT INTO games (game_id, player_id, game_mode, end_result, stop_round, winnings)"
+                            f"VALUES ({self.game_id}, {self.player_id}, {self.game_mode}, '{self.end_result}', {self.stop_round}, {self.winnings})")
+        conn.commit()
+        curs.close()
+        conn.close()
 
 
-class round(datarow):
+class _round(datarow):
     """
     holds data about one round played by a player
     """
-    def __init__(self, game_id, player_id, game_mode, round, bankers_offer, remaining_cases):
+    def __init__(self, game_id, player_id, game_mode, round, offer, remaining_cases):
         super().__init__(game_id, player_id, game_mode)
         self.round = round
-        self.bankers_offer = bankers_offer
+        self.offer = offer
         self.remaining_cases = remaining_cases
 
-    def write_to_file(self):
+    def save(self):
         # append to data file
-        with open("round_data.txt", "a") as f_in:
-            f_in.write(str(self.game_id) + "\t" + str(self.player_id) + "\t" + "\t" + str(self.game_mode) + "\t" +
-                       str(self.round) + "\t" + str(self.bankers_offer) + "\t" + str(self.remaining_cases) + "\n")
+        # with open("round_data.txt", "a") as f_in:
+        #     f_in.write(str(self.game_id) + "\t" + str(self.player_id) + "\t" + "\t" + str(self.game_mode) + "\t" +
+        #                str(self.round) + "\t" + str(self.bankers_offer) + "\t" + str(self.remaining_cases) + "\n")
+        conn = sl.connect(db)
+        curs = conn.execute("INSERT INTO rounds (game_id, player_id, game_mode, round, offer, remaining_cases)"
+                            f"VALUES ({self.game_id}, {self.player_id}, {self.game_mode}, {self.round}, {self.offer}, '{self.remaining_cases}')")
+        conn.commit()
+        curs.close()
+        conn.close()
 
 
 class error(datarow):
@@ -57,11 +74,19 @@ class error(datarow):
         self.round = round
         self.error_descr = error_descr
 
-    def write_to_file(self):
-        # append to data file
-        with open("errors.txt", "a") as f_in:
-            f_in.write(str(self.game_id) + "\t" + str(self.player_id) + "\t" + str(self.round) + "\t" +
-                       str(self.error_descr) + "\n")
+    def save(self):
+        # # append to data file
+        # with open("errors.txt", "a") as f_in:
+        #     f_in.write(str(self.game_id) + "\t" + str(self.player_id) + "\t" + str(self.round) + "\t" +
+        #                str(self.error_descr) + "\n")
+        conn = sl.connect(db)
+        stmt = "INSERT INTO errors (game_id, player_id, round, error_descr) " \
+                f"VALUES ({self.game_id}, {self.player_id}, {self.round}, '{self.error_descr}')"
+        curs = conn.execute(stmt)
+        conn.commit()
+        curs.close()
+        conn.close()
+
 
 
 
@@ -80,7 +105,7 @@ def pick_case(case_id_list_display, game_id, player_id, game_mode, round):
             if case_choice < 1 or case_choice > 26: # outside case id range
                 print("Please enter a valid number.")
                 new_error = error(game_id, player_id, game_mode, round, "chose case #" + str(case_choice) + " not in range")
-                new_error.write_to_file()
+                new_error.save()
             else:
                 if case_choice in case_id_list_display: # not in list of cases left
                     keepAsking = False
@@ -88,10 +113,10 @@ def pick_case(case_id_list_display, game_id, player_id, game_mode, round):
                 else: # is not in list of cases left
                     print("Case", case_choice, "was already chosen.")
                     new_error = error(game_id, player_id, game_mode, round, "chose case #" + str(case_choice) + " not available")
-                    new_error.write_to_file()
+                    new_error.save()
         else:
             new_error = error(game_id, player_id, game_mode, round, "chose case #" + str(case_choice) + " not numeric")
-            new_error.write_to_file()
+            new_error.save()
             print("Please enter a valid number.")
 
 
@@ -226,7 +251,7 @@ def eliminate_case(num_cases_to_eliminate, case_id_list_display, list_of_prizes_
         print("You chose case # " + str(eliminated_case))
         print("Opening case:")
         drumroll()
-        print(case_values[eliminated_case], "has been eliminated.")
+        print("The", case_values[eliminated_case], "point prize has been eliminated from the board.")
         userinput = input("Press enter to continue.\n")
         # update displays:
         remove_id_from_display(eliminated_case, case_id_list_display)
@@ -292,10 +317,18 @@ def create_id():
     It checks if ID was used before.
     :return: a unique ID
     """
-    with open("played_data.txt", "r") as f_in: # from past game data
-        for line in f_in: # loop through lines
-            id = line[:5] # set id as first 5 characters of the line
-            id_list.append(id)
+    # with open("played_data.txt", "r") as f_in: # from past game data
+    #     for line in f_in: # loop through lines
+    #         id = line[:5] # set id as first 5 characters of the line
+    #         id_list.append(id)
+
+    # TODO: retrieve list of all previously used id's
+    conn = sl.connect(db)
+    curs = conn.execute("SELECT game_id, player_id FROM games")
+    cols = curs.fetchall()
+    game_ids = [cols[i][0] for i in range(len(cols))]
+    player_ids = [cols[i][1] for i in range(len(cols))]
+    id_list = game_ids + player_ids
 
     generateNew = True # true if need to generate a new id
     while generateNew: # while id has been used
@@ -305,6 +338,7 @@ def create_id():
         else: # unique id was generated
             return id
             generateNew = False # no need to generate another one
+
 
 def early_round_eliminate_cases(r, case_id_list_display, list_of_prizes_display, case_values, game_id, player_id, game_mode):
     """
@@ -339,16 +373,16 @@ def get_player_offer(case_values, game_id, player_id, round):
         player_offer = input("> ")
     while (int(player_offer) > max(case_values.values())) or (int(player_offer) < min(case_values.values())):
         if int(player_offer) > max(case_values.values()): # greater than max possible prize
-            new_error = error(game_id, player_id, 4, round, "player's offer > max prize = " +
+            new_error = error(game_id, player_id, 4, round, "player offer > max prize = " +
                               str(max(case_values.values())))
-            new_error.write_to_file()
+            new_error.save()
             print("Your offer must be less than the biggest prize left in play. Try again.")
             player_offer = input("> ")
         elif int(player_offer) < min(case_values.values()): # less than min possible prize
-            new_error = error(game_id, player_id, 4, round, "player's offer < min prize = " +
+            new_error = error(game_id, player_id, 4, round, "player offer < min prize = " +
                               str(min(case_values.values())))
-            new_error.write_to_file()
-            print("Your offer must be less than the biggest prize left in play. Try again.")
+            new_error.save()
+            print("Your offer must be greater than the smallest prize left in play. Try again.")
             player_offer = input("> ")
     return int(player_offer)
 
@@ -360,7 +394,7 @@ def deal(offer, case_values, players_case, game_id, player_id, r, game_mode):
     print("Your case contained", case_values[players_case])
     print()
     new_game = game(game_id, player_id, game_mode, "D", r, offer)  # create game object
-    new_game.write_to_file()  # write that object into the file
+    new_game.save()  # write that object into the file
 
 
 def print_instructions(game_mode):
@@ -433,13 +467,11 @@ def play(game_mode, first_time, player_id):
 
     # create a list of case id's
     case_id_list = []  # will contain ints 1-26
-    for i in range(1, 27):
-        case_id_list.append(i)  # populate with ints 1-26
+    case_id_list = [i for i in range(1, 27)] # populate with ints 1-26
+
 
     # create copy for display
-    case_id_list_display = []
-    for case_id in case_id_list:
-        case_id_list_display.append(case_id)
+    case_id_list_display = [case_id for case_id in case_id_list]
         # in this copy, the case id's will be replaced by spaces once chosen by the player
 
     list_of_prizes = [0.01, 1, 5, 10, 25, 50, 75, 100, 200, 300, 400, 500, 750, 1000, 5000, 10000, 25000, 50000, 75000,
@@ -507,12 +539,12 @@ def play(game_mode, first_time, player_id):
                         userinput = input("Press enter to continue.\n")
                         displayBoard(case_id_list_display, list_of_prizes_display)
                     else:
-                        new_error = error(game_id, player_id, game_mode, round, "entered neither 1 or 0 for DOND")
-                        new_error.write_to_file()
+                        new_error = error(game_id, player_id, game_mode, r, "entered neither 1 or 0 for DOND")
+                        new_error.save()
                         print("Please enter either 1 or 0. ")
             # save new round data
-            new_round = round(game_id, player_id, game_mode, r, offer, get_prizes_left(list_of_prizes_display))
-            new_round.write_to_file()
+            new_round = _round(game_id, player_id, game_mode, r, offer, get_prizes_left(list_of_prizes_display))
+            new_round.save()
         else:
             # find last case:
             for case_id in case_id_list_display:
@@ -534,7 +566,7 @@ def play(game_mode, first_time, player_id):
                     drumroll()
                     print(winnings, "points!")
                     new_game = game(game_id, player_id, game_mode, "ND", r, winnings)  # create game object
-                    new_game.write_to_file()  # write that object into the file
+                    new_game.save()  # write that object into the file
                     gameOn = False
                 elif userswitch == "0":
                     print("You chose to keep your case.")
@@ -543,7 +575,7 @@ def play(game_mode, first_time, player_id):
                     drumroll()
                     print(winnings, "points!")
                     new_game = game(game_id, player_id, game_mode, "ND", r, winnings)  # create game object
-                    new_game.write_to_file()  # write that object into the file
+                    new_game.save()  # write that object into the file
                     gameOn = False
                 else:
                     print("Please enter either 1 or 0.")
@@ -569,10 +601,10 @@ def print_intro():
     print("\nWe thank you for participating in our study. \nToday you will play 2 modified versions of Deal or No Deal. \
 Instructions on how to play will follow. \nClick the blank space below so that a blinking cursor appears and press enter to continue.")
     userinput = input("")
-    print("Playing this game is voluntary, and you may stop at any time, though you will not receive \
+    print("Playing this game is voluntary, and you may stop at any time, though you will not receive\n\
 compensation unless you reach the end of both games.\nPress enter to continue.")
     userinput = input("")
-    print("In each game, you can win up to 1,000,000 points. Your final score will be divided by 100,000, \
+    print("In each game, you can win up to 1,000,000 points. Your final score will be divided by 100,000,\n\
 converted to dollars, and added to your compensation for your participation.\nFor example, if you win a total \
 of 623,211 points, you will be awarded an additional $6.23.\nPress enter to continue.")
     userinput = input("")
@@ -582,7 +614,7 @@ of 623,211 points, you will be awarded an additional $6.23.\nPress enter to cont
 
 def main():
     # WELCOME
-    print("Welcome to Deal or No Deal! Full screen and zoom out (ctrl -) for a better display")
+    print("Welcome to Deal or No Deal! Please zoom out in your browser (ctrl -) for a better display")
     time.sleep(1)
     print_intro()
 
@@ -593,16 +625,18 @@ def main():
         game_mode2 = 2
     elif game_mode1 ==2:
         game_mode2 = 1
+
+    # play the games
     winnings1, game_id1 = play(game_mode1, True, player_id)
     winnings2, game_id2 = play(game_mode2, False, player_id)
 
     # concluding message.
-    print("This concludes your participation in the study. Because you won", winnings1, "points during the first game \
-and", winnings2, "in the second game for a total of", str(winnings1+winnings2), "points, you will be compensated an \
+    print("This concludes your participation in the study. Because you won", winnings1, "points during the first game\n\
+and", winnings2, "in the second game for a total of", str(winnings1+winnings2), "points, you will be compensated\nan \
 additional $" + str(round(0.00001*(winnings1+winnings2),2)) + ". Thanks for playing!")
     time.sleep(1)
     print("Your player ID was saved as", player_id, "and your game ID's were saved as", game_id1, "and", str(game_id2)
-          + ". These serve as confirmation that you have completed two games. ")
+          + ". \nThese serve as confirmation that you have completed two games. ")
 
 if __name__ == "__main__":
     main()
